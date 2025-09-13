@@ -1,0 +1,1 @@
+[07-May-2025 06:37:16 UTC] PHP Fatal error:  Trait "App\Http\Controllers\Illuminate\Support\Facades\Storage" not found in /home3/earlyfpj/ascinate.in/demo/accounting/app/Http/Controllers/UserController.php on line 13
