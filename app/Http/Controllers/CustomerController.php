@@ -100,13 +100,11 @@ public function view()
     ->leftJoin('payments', 'sales.id', '=', 'payments.saleid')
     ->groupBy('customers.id')
     ->get();
-    
 
     return view('customers', [
         'customers' => $customers,  
     ]);
 }
-
 
 public function show($id)
 {
