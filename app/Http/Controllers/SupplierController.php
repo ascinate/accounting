@@ -12,45 +12,45 @@ class SupplierController extends Controller
 {
 
     public function exportExcel()
-{
-    $suppliers = Supplier::select(
-        'suppliers.*',
-        DB::raw('COUNT(purchases.id) as total_purchases'),
-        DB::raw('COALESCE(SUM(purchasedetails.totalprice), 0) as total_amount'),
-        DB::raw('COALESCE(SUM(payments.amount_paid), 0) as total_paid'),
-        DB::raw('COALESCE(SUM(purchasedetails.totalprice), 0) - COALESCE(SUM(payments.amount_paid), 0) as total_debt')
-    )
-    ->leftJoin('purchases', 'suppliers.id', '=', 'purchases.supplier_id')
-    ->leftJoin('purchasedetails', 'purchases.id', '=', 'purchasedetails.purchaseid')
-    ->leftJoin('payments', 'purchases.id', '=', 'payments.purchaseid')
-    ->groupBy('suppliers.id')
-    ->get();
+    {
+        $suppliers = Supplier::select(
+            'suppliers.*',
+            DB::raw('COUNT(purchases.id) as total_purchases'),
+            DB::raw('COALESCE(SUM(purchasedetails.totalprice), 0) as total_amount'),
+            DB::raw('COALESCE(SUM(payments.amount_paid), 0) as total_paid'),
+            DB::raw('COALESCE(SUM(purchasedetails.totalprice), 0) - COALESCE(SUM(payments.amount_paid), 0) as total_debt')
+        )
+        ->leftJoin('purchases', 'suppliers.id', '=', 'purchases.supplier_id')
+        ->leftJoin('purchasedetails', 'purchases.id', '=', 'purchasedetails.purchaseid')
+        ->leftJoin('payments', 'purchases.id', '=', 'payments.purchaseid')
+        ->groupBy('suppliers.id')
+        ->get();
 
-    // Generate CSV content
-    $csv = "Name,Email,Phone,City,Country,Address,Total Purchases,Total Amount,Total Paid,Total Debt\n"; // Header row
-    
-    foreach ($suppliers as $supplier) {
-        $csv .= '"' . str_replace('"', '""', $supplier->name) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->email) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->phone) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->city) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->country) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->address) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->total_purchases) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->total_amount) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->total_paid) . '",';
-        $csv .= '"' . str_replace('"', '""', $supplier->total_debt) . '"';
-        $csv .= "\n";
+        // Generate CSV content
+        $csv = "Name,Email,Phone,City,Country,Address,Total Purchases,Total Amount,Total Paid,Total Debt\n"; // Header row
+        
+        foreach ($suppliers as $supplier) {
+            $csv .= '"' . str_replace('"', '""', $supplier->name) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->email) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->phone) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->city) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->country) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->address) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->total_purchases) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->total_amount) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->total_paid) . '",';
+            $csv .= '"' . str_replace('"', '""', $supplier->total_debt) . '"';
+            $csv .= "\n";
+        }
+        
+        // Set headers for download
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="suppliers.csv"',
+        ];
+        
+        return response()->make($csv, 200, $headers);
     }
-    
-    // Set headers for download
-    $headers = [
-        'Content-Type' => 'text/csv',
-        'Content-Disposition' => 'attachment; filename="suppliers.csv"',
-    ];
-    
-    return response()->make($csv, 200, $headers);
-}
 
 public function exportPDF()
 {
@@ -71,13 +71,35 @@ public function exportPDF()
     
     return $pdf->download('suppliers.pdf');
 }
-    public function view()
-    {
-        $suppliers = Supplier::all();  
-        return view('suppliers', [
-            'suppliers' => $suppliers,  
-        ]);
-    }
+public function view()
+{
+    $suppliers = Supplier::select(
+        'suppliers.id',
+        'suppliers.name',
+        'suppliers.email',
+        'suppliers.phone',
+        'suppliers.address',
+        DB::raw('COUNT(DISTINCT purchases.id) as total_purchases'),
+        DB::raw('COALESCE(SUM(purchase_totals.total_amount), 0) as total_amount'),
+        DB::raw('COALESCE(SUM(payments.amount_paid), 0) as total_paid'),
+        DB::raw('COALESCE(SUM(purchase_totals.total_amount), 0) - COALESCE(SUM(payments.amount_paid), 0) as total_debt')
+    )
+    ->leftJoin('purchases', 'suppliers.id', '=', 'purchases.supplier_id')
+    // Subquery to calculate each purchase total separately (avoids duplicate sums)
+    ->leftJoin(DB::raw('(
+        SELECT purchaseid, SUM(totalprice) as total_amount
+        FROM purchasedetails
+        GROUP BY purchaseid
+    ) as purchase_totals'), 'purchases.id', '=', 'purchase_totals.purchaseid')
+    ->leftJoin('payments', 'purchases.id', '=', 'payments.purchaseid')
+    ->groupBy('suppliers.id', 'suppliers.name', 'suppliers.email', 'suppliers.phone', 'suppliers.address')
+    ->get();
+
+    return view('suppliers', [
+        'suppliers' => $suppliers,
+    ]);
+}
+
     public function store(Request $request)
     {
         $validatedData = $request->validate([

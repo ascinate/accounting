@@ -31,7 +31,6 @@ class SaleController extends Controller
 {
 
     public function view()
-
     {
 
         $sales = \DB::table('sales')
@@ -94,18 +93,10 @@ class SaleController extends Controller
 
     }
 
-    
-
-    
-
-
 
     public function store(Request $request)
 
     {
-
-       
-
         $request->validate([
 
             'date' => 'required|date',
@@ -175,10 +166,6 @@ class SaleController extends Controller
         return redirect()->back()->with('success', 'Sales added successfully!');
 
     }
-
-    
-
-
 
     public function destroy($id)
 

@@ -285,10 +285,10 @@
                                     </li>
                                     <li>
                                       <li>
-    <a class="dropdown-item" href="{{ route('sale.edit', $sale->id) }}">
-        <i class="lni lni-pencil"></i> Edit Sale
-    </a>
-</li>
+                                          <a class="dropdown-item" href="{{ route('sale.edit', $sale->id) }}">
+                                              <i class="lni lni-pencil"></i> Edit Sale
+                                          </a>
+                                      </li>
                           
 
                                     <li>

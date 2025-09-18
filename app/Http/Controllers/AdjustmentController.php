@@ -25,11 +25,11 @@ class AdjustmentController extends Controller
     {
         $search = $request->query('query');
 
-        $products = Product::where('code', 'LIKE', "%{$search}%")
-            ->orWhere('name', 'LIKE', "%{$search}%")
-            ->limit(5)
-            ->get();
-       
+       $products = Product::where('code', 'LIKE', "%{$search}%")
+        ->orWhere('name', 'LIKE', "%{$search}%")
+        ->limit(5)
+        ->get();
+
         return response()->json($products);
     }
 

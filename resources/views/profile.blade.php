@@ -21,7 +21,7 @@
 <div id="section_Profile_list">
     <div class="card profile-widget mt-5">
         <div class="profile-widget-header">
-            <img src="https://posly.getstocky.com/images/avatar/no_avatar.png" alt="" class="rounded-circle profile-widget-picture">
+            <img src="{{ asset('uploads/'. $user->profile_image) }}" alt="" class="rounded-circle profile-widget-picture">
         </div>
          <div class="card-body profile-widget-description">
            <form enctype="multipart/form-data">

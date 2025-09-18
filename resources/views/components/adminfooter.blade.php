@@ -38,7 +38,8 @@
     <script src="{{ asset('assets/js/main.js') }}"></script>
 
     
-    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    
+ 
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.js"></script>
     <script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.js"></script>
@@ -157,38 +158,189 @@ $(document).ready(function () {
 
 });
 </script>
-
 <script>
 $(document).ready(function () {
-    $('.pay-btn').on('click', function (e) {
-        const saleid = $(this).data('saleid') || null;
-        const purchaseid = $(this).data('purchaseid') || null;
-        const total = parseFloat($(this).data('total'));
+    console.log("POS Script Loaded!");
 
-        $('#modal_saleid').val(saleid);
-        $('#modal_purchaseid').val(purchaseid);
-        $('#modal_total').text(total.toFixed(2));
-        $('#modal_total_input').val(total);
+    function updatePosGrandTotal() {
+        let shipping = parseFloat($(".pos-shipping").val()) || 0;
+        let tax = parseFloat($(".pos-tax").val()) || 0;
+        let discount = parseFloat($(".pos-discount").val()) || 0;
+        let total = 0;
 
-        $('#paymentModal').modal('show');
+        $(".pos-cart-item").each(function () {
+            let rowTotal = parseFloat($(this).find(".pos-row-total").text()) || 0;
+            total += rowTotal;
+        });
+
+        let finalTotal = total + shipping + tax - discount;
+        $(".pos-grand-total").text(`$ ${finalTotal.toFixed(2)}`);
+    }
+
+    // Search product (POS)
+    $("#posProductSearch").on("keyup", function () {
+        let query = $(this).val().trim();
+
+        if (query.length > 1) {
+            $.ajax({
+                url: "{{ route('products.search') }}",
+                type: "GET",
+                data: { query: query },
+                success: function (response) {
+                    let dropdown = $("#posProductDropdown");
+                    dropdown.empty().show();
+
+                    if (response.length > 0) {
+                        response.forEach((product) => {
+                           let imageUrl = product.image ? `{{ asset('uploads/') }}/${product.image}` : '/uploads/no-image.png';
+                            dropdown.append(`
+                                 <li>
+                                <a href="#" class="dropdown-item pos-product-item"
+                                   data-id="${product.id}"
+                                   data-code="${product.code}"
+                                   data-name="${product.name}"
+                                   data-price="${product.price}"
+                                   data-stock="${product.stock_alert}"
+                                   data-type="${product.type}"
+                                   data-image_url="${imageUrl}">
+                                    ${product.name}
+                                </a>
+                            </li>
+                            `);
+                        });
+                    } else {
+                        dropdown.append('<li class="dropdown-item text-center">No results found</li>');
+                    }
+                },
+                error: function () {
+                    alert("Error fetching products. Please try again.");
+                }
+            });
+        } else {
+            $("#posProductDropdown").hide();
+        }
     });
 
-    $('#paymentForm').on('submit', function (e) {
-        const dueAmount = parseFloat($('#modal_total_input').val());
-        const payAmount = parseFloat($('#pay_amount').val());
+    // Add product to POS cart
+    $(document).on("click", ".pos-product-item", function (e) {
+        e.preventDefault();
+        let p = $(this).data();
+        $("#posProductSearch").val(p.name);
+        $("#posProductDropdown").hide();
 
-        if (dueAmount <= 0) {
-            e.preventDefault();
-            alert('Payment already complete.');
-            return;
-        }
+        let cart = $(".pos-card-items");
+        let imgSrc = p.image_url ?? '/uploads/no-image.png';
+        cart.append(`
+            <div class="pos-cart-item d-flex align-items-center justify-content-between p-2 mb-2 box-shadow-3" data-id="${p.id}" style="border-radius:8px; background:#fff;">
+                <div class="d-flex align-items-center">
+                    <img src="${imgSrc}" alt="${p.name}" style="width:50px;height:50px;object-fit:cover;border-radius:6px;margin-right:10px;">
+                    <div>
+                        <p class="m-0 fw-semibold">${p.name}</p>
+                        <h6 class="m-0">$ <span class="pos-row-total">${parseFloat(p.price).toFixed(2)}</span></h6>
+                        <div class="mt-1">
+                            <a href="#" class="pos-edit-item me-2"><i class="i-Edit"></i>edit</a>
+                            <a href="#" class="pos-remove-item"><i class="i-Close-Window"></i>remove</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button class="pos-decrement btn btn-light rounded-circle me-1">-</button>
+                    <input type="number" class="pos-cart-qty form-control text-center" data-price="${p.price}" value="1" min="1" style="width:50px;">
+                    <button class="pos-increment btn btn-light rounded-circle ms-1">+</button>
+                </div>
+            </div>
+        `);
 
-        if (payAmount > dueAmount) {
-            e.preventDefault();
-            alert('Payment amount cannot be greater than the due amount.');
-        }
+        updatePosGrandTotal();
+    });
+
+    // Increment
+    $(document).on("click", ".pos-increment", function () {
+        let qtyInput = $(this).siblings(".pos-cart-qty");
+        let qty = parseInt(qtyInput.val()) + 1;
+        qtyInput.val(qty).trigger("input");
+    });
+
+    // Decrement
+    $(document).on("click", ".pos-decrement", function () {
+        let qtyInput = $(this).siblings(".pos-cart-qty");
+        let qty = Math.max(1, parseInt(qtyInput.val()) - 1);
+        qtyInput.val(qty).trigger("input");
+    });
+
+    // Qty change updates row total
+    $(document).on("input", ".pos-cart-qty", function () {
+        let qty = parseFloat($(this).val()) || 1;
+        let price = parseFloat($(this).data("price"));
+        let total = qty * price;
+        $(this).closest(".pos-cart-item").find(".pos-row-total").text(total.toFixed(2));
+        updatePosGrandTotal();
+    });
+
+    // Remove product
+    $(document).on("click", ".pos-remove-item", function (e) {
+        e.preventDefault();
+        $(this).closest(".pos-cart-item").remove();
+        updatePosGrandTotal();
+    });
+
+    // Shipping / Tax / Discount update
+    $(document).on("input", ".pos-shipping, .pos-tax, .pos-discount", function () {
+        updatePosGrandTotal();
+    });
+
+    // Submit POS form
+    $("form.pos-form").on("submit", function (e) {
+        e.preventDefault(); // remove this if you want normal submit
+
+        let cartData = [];
+        $(".pos-cart-item").each(function () {
+            let id = $(this).data("id");
+            let qty = parseFloat($(this).find(".pos-cart-qty").val()) || 1;
+            let price = parseFloat($(this).find(".pos-cart-qty").data("price")) || 0;
+            let total = qty * price;
+            cartData.push({ id, qty, price, total });
+        });
+
+        $("#pos_final_cart").val(JSON.stringify(cartData));
+
+        console.log("Submitting cart:", cartData);
+        // $(this).submit(); // uncomment to actually submit
     });
 });
+</script>
+
+
+<script>
+$(document).on('click', '.pay-btn', function (e) {
+    const saleid = $(this).data('saleid') || null;
+    const purchaseid = $(this).data('purchaseid') || null;
+    const total = parseFloat($(this).data('total'));
+
+    $('#modal_saleid').val(saleid);
+    $('#modal_purchaseid').val(purchaseid);
+    $('#modal_total').text(total.toFixed(2));
+    $('#modal_total_input').val(total);
+
+    $('#paymentModal').modal('show');
+});
+
+$(document).on('submit', '#paymentForm', function (e) {
+    const dueAmount = parseFloat($('#modal_total_input').val());
+    const payAmount = parseFloat($('#pay_amount').val());
+
+    if (dueAmount <= 0) {
+        e.preventDefault();
+        alert('Payment already complete.');
+        return;
+    }
+
+    if (payAmount > dueAmount) {
+        e.preventDefault();
+        alert('Payment amount cannot be greater than the due amount.');
+    }
+});
+
 </script>
 
 <script>
@@ -211,7 +363,34 @@ $(document).ready(function () {
     }
   });
 </script>
+<script>
+$(document).ready(function () {
+    $('#user-change-password-form').submit(function (e) {
+        e.preventDefault();
 
+        $.ajax({
+            url: "{{ url('user/changepassword') }}",
+            type: "POST",
+            data: {
+                _token: $('input[name="_token"]').val(),
+                new_password: $('#user_new_password').val()
+            },
+            success: function (response) {
+                $('#user-response-message').html('<p class="text-success">' + response.message + '</p>');
+                $('#user-change-password-form')[0].reset();
+                setTimeout(() => {
+                    $('#changeUserPasswordModal').modal('hide');
+                    $('#user-response-message').html('');
+                }, 1500);
+            },
+            error: function (xhr) {
+                let msg = xhr.responseJSON?.message || 'Something went wrong';
+                $('#user-response-message').html('<p class="text-danger">' + msg + '</p>');
+            }
+        });
+    });
+});
+</script>
 
 
 

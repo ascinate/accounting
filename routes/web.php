@@ -20,8 +20,8 @@ use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AdjustmentController;
+use App\Http\Controllers\PosController;
 use App\Http\Middleware\RolePermission;
-
 
 
 Route::get('/', function () {
@@ -183,6 +183,8 @@ Route::get('/deletesales/{id}', [SaleController::class, 'destroy']);
         Route::get('/download-pdf/{id}', [SaleController::class, 'downloadPDF']);
 
         Route::get('/purchase-download-pdf/{id}', [PurchaseController::class, 'downloadPDF']);
+
+        Route::get('/pos',[PosController::class, 'view']);
 
 
 

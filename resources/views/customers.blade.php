@@ -189,7 +189,7 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 rounded-pill">
-                                            {{ number_format($customer->product_price, 2) }}
+                                            {{ number_format($customer->total_due, 2) }}
                                         </span>
                                     </td>
                                     <td class="pe-4 text-end">

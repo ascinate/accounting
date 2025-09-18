@@ -10,7 +10,7 @@
 <aside class="sidebar-nav-wrapper">
       <div class="navbar-logo">
         <a href="{{ URL::to('/dashboard') }}">
-          <img src="assets/images/logo/logo.svg" alt="logo" />
+          <img src="{{ asset('assets/images/logo/logo.svg')}}" alt="logo" />
         </a>
       </div>
       <nav class="sidebar-nav">

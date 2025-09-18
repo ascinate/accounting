@@ -88,18 +88,32 @@ public function exportPDF()
 
 public function view()
 {
-    $customers = Customer::select(
-        'customers.*',
-        DB::raw('COUNT(sales.id) as total_sales'),
-        DB::raw('COALESCE(SUM(saledetails.totalprice), 0) as total_amount'),
-        DB::raw('COALESCE(SUM(payments.amount_paid), 0) as total_paid'),
-        DB::raw('COALESCE(SUM(saledetails.totalprice), 0) - COALESCE(SUM(payments.amount_paid), 0) as total_debt')
-    )
-    ->leftJoin('sales', 'customers.id', '=', 'sales.customerid')
-    ->leftJoin('saledetails', 'sales.id', '=', 'saledetails.saleid')
-    ->leftJoin('payments', 'sales.id', '=', 'payments.saleid')
-    ->groupBy('customers.id')
-    ->get();
+     $customers = \DB::table('customers')
+        ->leftJoin('sales', 'customers.id', '=', 'sales.customerid')
+        ->leftJoin('saledetails', 'sales.id', '=', 'saledetails.saleid')
+        ->leftJoin('payments', 'sales.id', '=', 'payments.saleid')
+        ->select(
+            'customers.id',
+            'customers.name',
+            'customers.email',
+            'customers.phone',
+            'customers.image',
+            'customers.city',
+            'customers.address',
+            DB::raw('COALESCE(SUM(saledetails.totalprice),0) as total_sales'),
+            DB::raw('COALESCE(SUM(payments.amount_paid),0) as total_paid'),
+            DB::raw('(COALESCE(SUM(saledetails.totalprice),0) - COALESCE(SUM(payments.amount_paid),0)) as total_due')
+        )
+        ->groupBy(
+            'customers.id',
+            'customers.name',
+            'customers.email',
+            'customers.phone',
+            'customers.image',
+            'customers.city',
+            'customers.address'
+        )
+        ->get();
 
     return view('customers', [
         'customers' => $customers,  
